@@ -5,6 +5,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jeffeson Brito - Portfolio</title>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-W7YQ36DSYG"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-W7YQ36DSYG', {
+        // Configurações opcionais para melhor tracking
+        send_page_view: true,
+        anonymize_ip: true, // Para compliance com LGPD
+        cookie_expires: 63072000, // 2 anos em segundos
+        custom_map: {
+          'custom_parameter_1': 'page_title',
+          'custom_parameter_2': 'page_location'
+        }
+      });
+
+      // Tracking de tempo na página
+      let startTime = Date.now();
+      
+      // Tracking de scroll profundidade
+      let maxScroll = 0;
+      window.addEventListener('scroll', function() {
+        const scrolled = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
+        if (scrolled > maxScroll) {
+          maxScroll = scrolled;
+          if (maxScroll >= 25 && maxScroll < 50) {
+            gtag('event', 'scroll', { 'scroll_depth': '25%' });
+          } else if (maxScroll >= 50 && maxScroll < 75) {
+            gtag('event', 'scroll', { 'scroll_depth': '50%' });
+          } else if (maxScroll >= 75 && maxScroll < 90) {
+            gtag('event', 'scroll', { 'scroll_depth': '75%' });
+          } else if (maxScroll >= 90) {
+            gtag('event', 'scroll', { 'scroll_depth': '90%' });
+          }
+        }
+      });
+
+      // Tracking quando o usuário sai da página
+      window.addEventListener('beforeunload', function() {
+        const timeSpent = Math.round((Date.now() - startTime) / 1000);
+        gtag('event', 'page_view_time', {
+          'custom_parameter_1': timeSpent + ' seconds',
+          'value': timeSpent
+        });
+      });
+
+      // Tracking de cliques em links externos
+      document.addEventListener('click', function(e) {
+        if (e.target.tagName === 'A' && e.target.hostname !== window.location.hostname) {
+          gtag('event', 'click', {
+            'event_category': 'outbound',
+            'event_label': e.target.href,
+            'transport_type': 'beacon'
+          });
+        }
+      });
+    </script>
+    
     <style>
         /* style.css*/
 * {
@@ -179,7 +240,7 @@ nav a:hover::after, nav a.active::after {
 }
 
 
-.social-links a:hover {
+social-links a:hover {
     background-color: #a08f7a;
     transform: translateY(-3px);
     box-shadow: 0 5px 15px rgba(160, 143, 122, 0.4);
@@ -359,6 +420,25 @@ nav a:hover::after, nav a.active::after {
         height: 20px;
     }
 }
+
+/* Cookie Banner Responsivo */
+@media (max-width: 768px) {
+    #cookie-banner {
+        padding: 12px 15px !important;
+    }
+    
+    #cookie-banner p {
+        font-size: 13px !important;
+        margin-bottom: 12px !important;
+    }
+    
+    #cookie-banner button {
+        font-size: 13px !important;
+        padding: 6px 15px !important;
+        margin: 5px !important;
+        display: inline-block;
+    }
+}
     </style>
 </head>
 <body>
@@ -410,9 +490,100 @@ nav a:hover::after, nav a.active::after {
         </div>
     </main>
 
+    <!-- Banner de Cookies LGPD -->
+    <div id="cookie-banner" style="
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #2c3e50;
+      color: white;
+      padding: 15px 20px;
+      text-align: center;
+      z-index: 9999;
+      display: none;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    ">
+      <div style="max-width: 1200px; margin: 0 auto;">
+        <p style="margin: 0 0 10px 0; font-size: 14px;">
+          🍪 Este site usa cookies para análise de tráfego e melhoria da experiência. 
+          Seus dados são anônimos e não são compartilhados com terceiros.
+        </p>
+        <button onclick="acceptCookies()" style="
+          background: #3498db;
+          color: white;
+          border: none;
+          padding: 8px 20px;
+          border-radius: 4px;
+          cursor: pointer;
+          margin-right: 10px;
+          font-size: 14px;
+        ">
+          Aceitar
+        </button>
+        <button onclick="declineCookies()" style="
+          background: transparent;
+          color: white;
+          border: 1px solid white;
+          padding: 8px 20px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+        ">
+          Recusar
+        </button>
+      </div>
+    </div>
+
     <script>
+        // Gerenciamento de cookies
+function showCookieBanner() {
+  if (!localStorage.getItem('cookieConsent')) {
+    document.getElementById('cookie-banner').style.display = 'block';
+  }
+}
+
+function acceptCookies() {
+  localStorage.setItem('cookieConsent', 'accepted');
+  document.getElementById('cookie-banner').style.display = 'none';
+  
+  // Ativa o Google Analytics apenas após aceitar
+  gtag('consent', 'update', {
+    'analytics_storage': 'granted'
+  });
+  
+  // Track do consentimento
+  gtag('event', 'cookie_consent', {
+    'event_category': 'engagement',
+    'event_label': 'accepted'
+  });
+}
+
+function declineCookies() {
+  localStorage.setItem('cookieConsent', 'declined');
+  document.getElementById('cookie-banner').style.display = 'none';
+  
+  // Desativa tracking
+  gtag('consent', 'update', {
+    'analytics_storage': 'denied'
+  });
+  
+  // Track do não consentimento (irônico, mas útil)
+  gtag('event', 'cookie_consent', {
+    'event_category': 'engagement',
+    'event_label': 'declined'
+  });
+}
+
         // Aguarda o carregamento completo da página
 document.addEventListener('DOMContentLoaded', function() {
+    
+    // Configuração inicial de consentimento (restritiva)
+    gtag('consent', 'default', {
+        'analytics_storage': 'denied'
+    });
+    
+    showCookieBanner();
     
     // Header scroll effect
     window.addEventListener('scroll', function() {
