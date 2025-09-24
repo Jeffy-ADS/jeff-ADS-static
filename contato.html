@@ -5,6 +5,61 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contato - Jeffeson Brito</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-W7YQ36DSYG"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-W7YQ36DSYG', {
+        send_page_view: true,
+        anonymize_ip: true,
+        cookie_expires: 63072000,
+        custom_map: {
+          'custom_parameter_1': 'page_title',
+          'custom_parameter_2': 'page_location'
+        }
+      });
+
+      let startTime = Date.now();
+      
+      let maxScroll = 0;
+      window.addEventListener('scroll', function() {
+        const scrolled = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
+        if (scrolled > maxScroll) {
+          maxScroll = scrolled;
+          if (maxScroll >= 25 && maxScroll < 50) {
+            gtag('event', 'scroll', { 'scroll_depth': '25%' });
+          } else if (maxScroll >= 50 && maxScroll < 75) {
+            gtag('event', 'scroll', { 'scroll_depth': '50%' });
+          } else if (maxScroll >= 75 && maxScroll < 90) {
+            gtag('event', 'scroll', { 'scroll_depth': '75%' });
+          } else if (maxScroll >= 90) {
+            gtag('event', 'scroll', { 'scroll_depth': '90%' });
+          }
+        }
+      });
+
+      window.addEventListener('beforeunload', function() {
+        const timeSpent = Math.round((Date.now() - startTime) / 1000);
+        gtag('event', 'page_view_time', {
+          'custom_parameter_1': timeSpent + ' seconds',
+          'value': timeSpent
+        });
+      });
+
+      document.addEventListener('click', function(e) {
+        if (e.target.tagName === 'A' && e.target.hostname !== window.location.hostname) {
+          gtag('event', 'click', {
+            'event_category': 'outbound',
+            'event_label': e.target.href,
+            'transport_type': 'beacon'
+          });
+        }
+      });
+    </script>
     <style>
         * {
             margin: 0;

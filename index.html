@@ -568,11 +568,283 @@ function declineCookies() {
     'analytics_storage': 'denied'
   });
   
-  // Track do não consentimento (irônico, mas útil)
+  // Track do não consentimento
   gtag('event', 'cookie_consent', {
     'event_category': 'engagement',
     'event_label': 'declined'
   });
+}
+
+// === SISTEMA DE DETECÇÃO DE DISPOSITIVO AVANÇADO ===
+// Função para detectar informações detalhadas do dispositivo
+function getDeviceInfo() {
+  const info = {
+    // Detectar tipo de dispositivo
+    deviceType: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+      ? (/iPad/i.test(navigator.userAgent) ? 'tablet' : 'mobile') 
+      : 'desktop',
+    
+    // Sistema operacional
+    os: getOperatingSystem(),
+    
+    // Navegador
+    browser: getBrowser(),
+    
+    // Resolução da tela
+    screenResolution: screen.width + 'x' + screen.height,
+    
+    // Resolução da janela
+    windowSize: window.innerWidth + 'x' + window.innerHeight,
+    
+    // Informações adicionais
+    colorDepth: screen.colorDepth + '-bit',
+    pixelRatio: window.devicePixelRatio || 1,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    language: navigator.language,
+    cookieEnabled: navigator.cookieEnabled,
+    onlineStatus: navigator.onLine ? 'online' : 'offline'
+  };
+  
+  return info;
+}
+
+// Função para detectar sistema operacional
+function getOperatingSystem() {
+  const userAgent = navigator.userAgent;
+  const platform = navigator.platform;
+  
+  if (/Windows NT/i.test(userAgent)) {
+    if (/Windows NT 10/i.test(userAgent)) return 'Windows 10';
+    if (/Windows NT 6\.3/i.test(userAgent)) return 'Windows 8.1';
+    if (/Windows NT 6\.2/i.test(userAgent)) return 'Windows 8';
+    if (/Windows NT 6\.1/i.test(userAgent)) return 'Windows 7';
+    return 'Windows';
+  }
+  if (/Android/i.test(userAgent)) {
+    const match = userAgent.match(/Android ([0-9\.]+)/);
+    return match ? `Android ${match[1]}` : 'Android';
+  }
+  if (/iPhone|iPad|iPod/i.test(userAgent)) {
+    const match = userAgent.match(/OS ([0-9_]+)/);
+    if (match) {
+      const version = match[1].replace(/_/g, '.');
+      return /iPad/i.test(userAgent) ? `iPadOS ${version}` : `iOS ${version}`;
+    }
+    return /iPad/i.test(userAgent) ? 'iPadOS' : 'iOS';
+  }
+  if (/Mac OS X/i.test(userAgent)) {
+    const match = userAgent.match(/Mac OS X ([0-9_]+)/);
+    return match ? `macOS ${match[1].replace(/_/g, '.')}` : 'macOS';
+  }
+  if (/Linux/i.test(platform)) return 'Linux';
+  if (/CrOS/i.test(userAgent)) return 'Chrome OS';
+  
+  return 'Unknown OS';
+}
+
+// Função para detectar navegador
+function getBrowser() {
+  const userAgent = navigator.userAgent;
+  
+  if (/Edg/i.test(userAgent)) return 'Microsoft Edge';
+  if (/Chrome/i.test(userAgent) && !/Chromium/i.test(userAgent)) {
+    const match = userAgent.match(/Chrome\/([0-9\.]+)/);
+    return match ? `Chrome ${match[1].split('.')[0]}` : 'Chrome';
+  }
+  if (/Firefox/i.test(userAgent)) {
+    const match = userAgent.match(/Firefox\/([0-9\.]+)/);
+    return match ? `Firefox ${match[1].split('.')[0]}` : 'Firefox';
+  }
+  if (/Safari/i.test(userAgent) && !/Chrome/i.test(userAgent)) {
+    const match = userAgent.match(/Version\/([0-9\.]+)/);
+    return match ? `Safari ${match[1].split('.')[0]}` : 'Safari';
+  }
+  if (/Opera|OPR/i.test(userAgent)) return 'Opera';
+  if (/Trident/i.test(userAgent)) return 'Internet Explorer';
+  
+  return 'Unknown Browser';
+}
+
+// Enviar dados detalhados do dispositivo para o GA4
+function sendDeviceDataToGA4() {
+  if (typeof gtag === 'undefined') return;
+  
+  const deviceInfo = getDeviceInfo();
+  
+  // Evento personalizado com informações do dispositivo
+  gtag('event', 'device_info', {
+    'event_category': 'technical_data',
+    'device_type': deviceInfo.deviceType,
+    'operating_system': deviceInfo.os,
+    'browser_name': deviceInfo.browser,
+    'screen_resolution': deviceInfo.screenResolution,
+    'window_size': deviceInfo.windowSize,
+    'color_depth': deviceInfo.colorDepth,
+    'pixel_ratio': deviceInfo.pixelRatio,
+    'timezone': deviceInfo.timezone,
+    'language': deviceInfo.language,
+    'cookie_enabled': deviceInfo.cookieEnabled,
+    'connection_status': deviceInfo.onlineStatus
+  });
+  
+  // Configurar parâmetros personalizados
+  gtag('config', 'G-W7YQ36DSYG', {
+    'custom_map': {
+      'custom_parameter_1': 'device_type',
+      'custom_parameter_2': 'operating_system',
+      'custom_parameter_3': 'browser_name',
+      'custom_parameter_4': 'screen_resolution'
+    }
+  });
+  
+  // Log no console para debug
+  console.log('Device Info enviado para GA4:', deviceInfo);
+}
+
+// Detectar mudanças na orientação (mobile/tablet)
+function trackOrientationChange() {
+  if (typeof gtag === 'undefined') return;
+  
+  let orientation = screen.orientation ? screen.orientation.type : 
+    (window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
+  
+  gtag('event', 'orientation_change', {
+    'event_category': 'device_interaction',
+    'orientation': orientation,
+    'screen_width': window.innerWidth,
+    'screen_height': window.innerHeight
+  });
+}
+
+// Detectar mudanças na conexão
+function trackConnectionChange() {
+  if (typeof gtag === 'undefined') return;
+  
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  
+  if (connection) {
+    gtag('event', 'connection_info', {
+      'event_category': 'technical_data',
+      'connection_type': connection.effectiveType || 'unknown',
+      'downlink': connection.downlink || 0,
+      'rtt': connection.rtt || 0
+    });
+  }
+}
+
+// Rastrear informações de performance
+function trackPagePerformance() {
+  if (typeof gtag === 'undefined' || !window.performance) return;
+  
+  setTimeout(function() {
+    const navigation = performance.getEntriesByType('navigation')[0];
+    if (navigation) {
+      gtag('event', 'page_performance', {
+        'event_category': 'technical_data',
+        'page_load_time': Math.round(navigation.loadEventEnd - navigation.fetchStart),
+        'dom_content_loaded': Math.round(navigation.domContentLoadedEventEnd - navigation.fetchStart),
+        'dns_lookup_time': Math.round(navigation.domainLookupEnd - navigation.domainLookupStart),
+        'connect_time': Math.round(navigation.connectEnd - navigation.connectStart),
+        'response_time': Math.round(navigation.responseEnd - navigation.requestStart)
+      });
+    }
+    
+    // Core Web Vitals
+    if ('web-vital' in window) {
+      getCLS(function(metric) {
+        gtag('event', 'web_vital_cls', {
+          'event_category': 'web_vitals',
+          'value': Math.round(metric.value * 1000)
+        });
+      });
+      
+      getFID(function(metric) {
+        gtag('event', 'web_vital_fid', {
+          'event_category': 'web_vitals',
+          'value': Math.round(metric.value)
+        });
+      });
+      
+      getLCP(function(metric) {
+        gtag('event', 'web_vital_lcp', {
+          'event_category': 'web_vitals',
+          'value': Math.round(metric.value)
+        });
+      });
+    }
+  }, 2000);
+}
+
+// Detectar recursos bloqueados/carregados
+function trackResourceLoading() {
+  if (typeof gtag === 'undefined') return;
+  
+  const resources = performance.getEntriesByType('resource');
+  let totalResources = resources.length;
+  let failedResources = 0;
+  
+  resources.forEach(resource => {
+    if (resource.transferSize === 0 && resource.decodedBodySize === 0) {
+      failedResources++;
+    }
+  });
+  
+  gtag('event', 'resource_loading', {
+    'event_category': 'technical_data',
+    'total_resources': totalResources,
+    'failed_resources': failedResources,
+    'success_rate': Math.round(((totalResources - failedResources) / totalResources) * 100)
+  });
+}
+
+// Eventos personalizados para tracking avançado
+function trackContactClick() {
+  if (typeof gtag !== 'undefined') {
+    gtag('event', 'contact_click', {
+      'event_category': 'engagement',
+      'event_label': 'header_contact_button'
+    });
+  }
+}
+
+function trackCVDownload() {
+  if (typeof gtag !== 'undefined') {
+    gtag('event', 'file_download', {
+      'event_category': 'engagement',
+      'event_label': 'cv_download',
+      'file_name': 'jeffeson_brito_cv.pdf'
+    });
+  }
+}
+
+function trackProjectView(projectName) {
+  if (typeof gtag !== 'undefined') {
+    gtag('event', 'view_item', {
+      'event_category': 'portfolio',
+      'event_label': projectName,
+      'value': 1
+    });
+  }
+}
+
+function trackSectionView(sectionName) {
+  if (typeof gtag !== 'undefined') {
+    gtag('event', 'section_view', {
+      'event_category': 'navigation',
+      'event_label': sectionName,
+      'page_title': document.title
+    });
+  }
+}
+
+function trackSkillInteraction(skillName) {
+  if (typeof gtag !== 'undefined') {
+    gtag('event', 'skill_interaction', {
+      'event_category': 'engagement',
+      'event_label': skillName,
+      'interaction_type': 'hover'
+    });
+  }
 }
 
         // Aguarda o carregamento completo da página
@@ -584,6 +856,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     showCookieBanner();
+    
+    // Aguardar um pouco para garantir que o GA4 carregou
+    setTimeout(function() {
+        sendDeviceDataToGA4();
+        trackConnectionChange();
+    }, 1000);
+    
+    // Track página inicial carregada
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'page_view', {
+            'event_category': 'engagement',
+            'event_label': 'home_page_loaded',
+            'page_title': 'Portfolio Home'
+        });
+    }
     
     // Header scroll effect
     window.addEventListener('scroll', function() {
@@ -597,10 +884,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Smooth scroll for navigation links
+    // Smooth scroll for navigation links com tracking
     document.querySelectorAll('nav a').forEach(link => {
         link.addEventListener('click', function(e) {
             const href = this.getAttribute('href');
+            const linkText = this.textContent.trim();
+            
+            // Track navigation clicks
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'navigation_click', {
+                    'event_category': 'navigation',
+                    'event_label': linkText.toLowerCase(),
+                    'link_url': href
+                });
+            }
             
             // Se for um hash link, aplica smooth scroll
             if (href.startsWith('#')) {
@@ -612,6 +909,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         behavior: 'smooth',
                         block: 'start'
                     });
+                    
+                    // Track section view
+                    trackSectionView(linkText.toLowerCase());
                 }
                 
                 // Remove active class from all links
@@ -639,10 +939,28 @@ document.addEventListener('DOMContentLoaded', function() {
     if (profileImg) {
         profileImg.onerror = function() {
             this.src = fallbackImageSVG;
+            
+            // Track image error
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'image_error', {
+                    'event_category': 'error',
+                    'event_label': 'profile_image_fallback'
+                });
+            }
+        };
+        
+        // Track successful image load
+        profileImg.onload = function() {
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'image_loaded', {
+                    'event_category': 'performance',
+                    'event_label': 'profile_image_success'
+                });
+            }
         };
     }
 
-    // Efeitos para links sociais
+    // Efeitos para links sociais com tracking aprimorado
     const socialLinks = document.querySelectorAll('.social-links a');
     socialLinks.forEach(link => {
         link.addEventListener('click', function(e) {
@@ -654,12 +972,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 codepen: 'https://codepen.io/Jeffeson-Brito'
             };
 
+            // Track social media clicks
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'social_media_click', {
+                    'event_category': 'social_media',
+                    'event_label': socialType,
+                    'social_network': socialType,
+                    'link_url': this.href || socialUrls[socialType]
+                });
+            }
+
             // Se o link não tem href definido, usa o JavaScript para redirecionar
             if (this.getAttribute('href') === '#' && socialUrls[socialType]) {
                 e.preventDefault();
                 window.open(socialUrls[socialType], '_blank');
             }
-            // Se já tem href definido, deixa o comportamento padrão funcionar
+        });
+
+        // Track social media hover
+        link.addEventListener('mouseenter', function() {
+            const socialType = this.getAttribute('data-social');
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'social_media_hover', {
+                    'event_category': 'engagement',
+                    'event_label': socialType,
+                    'interaction_type': 'hover'
+                });
+            }
         });
 
         // Efeito de pulso ao clicar
@@ -671,78 +1010,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Efeito de digitação no nome (opcional)
-    function typeWriter(element, text, speed = 100) {
-        let i = 0;
-        element.innerHTML = '';
-        element.style.opacity = '1';
-        
-        function type() {
-            if (i < text.length) {
-                element.innerHTML += text.charAt(i);
-                i++;
-                setTimeout(type, speed);
-            }
-        }
-        type();
-    }
-
-    // Aplica efeito de digitação no nome (descomente se quiser usar)
-    // const profileName = document.querySelector('.profile-name');
-    // if (profileName) {
-    //     const originalText = profileName.textContent;
-    //     typeWriter(profileName, originalText, 80);
-    // }
-
-    // Parallax suave no scroll
-    let ticking = false;
-    
-    function updateParallax() {
-        const scrolled = window.pageYOffset;
-        const parallaxElements = document.querySelectorAll('.profile-container');
-        
-        parallaxElements.forEach(element => {
-            const speed = 0.5;
-            const yPos = -(scrolled * speed);
-            element.style.transform = `translate3d(0, ${yPos}px, 0)`;
-        });
-        
-        ticking = false;
-    }
-
-    window.addEventListener('scroll', function() {
-        if (!ticking) {
-            requestAnimationFrame(updateParallax);
-            ticking = true;
-        }
-    });
-
-    // Animação de entrada dos elementos
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-
-    const observer = new IntersectionObserver(function(entries) {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
-            }
-        });
-    }, observerOptions);
-
-    // Observa elementos para animação
-    const animatedElements = document.querySelectorAll('.profile-info > *');
-    animatedElements.forEach(element => {
-        observer.observe(element);
-    });
-
-    // Efeito de hover na imagem de perfil
+    // Efeito de hover na imagem de perfil com tracking
     const profileImage = document.querySelector('.profile-image');
     if (profileImage) {
         profileImage.addEventListener('mouseenter', function() {
             this.style.transform = 'scale(1.02) rotate(1deg)';
+            
+            // Track profile image interaction
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'profile_image_hover', {
+                    'event_category': 'engagement',
+                    'event_label': 'profile_image_interaction'
+                });
+            }
         });
 
         profileImage.addEventListener('mouseleave', function() {
@@ -750,12 +1030,101 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Scroll depth tracking aprimorado
+    let maxScrollDepth = 0;
+    const scrollMilestones = [10, 25, 50, 75, 90, 100];
+    const trackedMilestones = new Set();
+    
+    window.addEventListener('scroll', function() {
+        const scrollPercent = Math.round(
+            (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100
+        );
+        
+        if (scrollPercent > maxScrollDepth) {
+            maxScrollDepth = scrollPercent;
+            
+            scrollMilestones.forEach(milestone => {
+                if (scrollPercent >= milestone && !trackedMilestones.has(milestone)) {
+                    trackedMilestones.add(milestone);
+                    
+                    if (typeof gtag !== 'undefined') {
+                        gtag('event', 'scroll_depth', {
+                            'event_category': 'engagement',
+                            'event_label': `${milestone}%`,
+                            'value': milestone
+                        });
+                    }
+                }
+            });
+        }
+    });
+
+    // Time on page tracking
+    let startTime = Date.now();
+    let timeIntervals = [30, 60, 120, 300]; // 30s, 1min, 2min, 5min
+    let trackedIntervals = new Set();
+    
+    setInterval(function() {
+        const timeSpent = Math.round((Date.now() - startTime) / 1000);
+        
+        timeIntervals.forEach(interval => {
+            if (timeSpent >= interval && !trackedIntervals.has(interval)) {
+                trackedIntervals.add(interval);
+                
+                if (typeof gtag !== 'undefined') {
+                    gtag('event', 'time_on_page', {
+                        'event_category': 'engagement',
+                        'event_label': `${interval}_seconds`,
+                        'value': interval
+                    });
+                }
+            }
+        });
+    }, 10000); // Check every 10 seconds
+
+    // Page visibility tracking
+    document.addEventListener('visibilitychange', function() {
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'page_visibility', {
+                'event_category': 'engagement',
+                'event_label': document.hidden ? 'hidden' : 'visible',
+                'visibility_state': document.hidden ? 'hidden' : 'visible'
+            });
+        }
+    });
+
     // Loading animation
     window.addEventListener('load', function() {
         const profileContainer = document.querySelector('.profile-container');
         if (profileContainer) {
             profileContainer.style.opacity = '1';
             profileContainer.style.transform = 'translateY(0)';
+        }
+        
+        // Track full page load
+        const loadTime = Date.now() - startTime;
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'page_load_time', {
+                'event_category': 'performance',
+                'event_label': 'full_page_load',
+                'value': loadTime
+            });
+        }
+        
+        // Track performance metrics
+        trackPagePerformance();
+        trackResourceLoading();
+    });
+
+    // Error tracking
+    window.addEventListener('error', function(e) {
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'javascript_error', {
+                'event_category': 'error',
+                'event_label': e.message,
+                'error_filename': e.filename,
+                'error_line': e.lineno
+            });
         }
     });
 
@@ -777,6 +1146,51 @@ document.addEventListener('DOMContentLoaded', function() {
     document.head.appendChild(style);
 
     console.log('Portfolio Jeffeson Brito - Carregado com sucesso!');
+    
+    // Track console ready
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'portfolio_ready', {
+            'event_category': 'technical',
+            'event_label': 'javascript_initialized'
+        });
+    }
+});
+
+// === EVENTOS PARA CAPTURAR MUDANÇAS ===
+// Eventos para capturar mudanças na orientação
+window.addEventListener('orientationchange', function() {
+  setTimeout(trackOrientationChange, 500);
+});
+
+// Eventos para capturar mudanças na conexão
+window.addEventListener('online', function() {
+  if (typeof gtag !== 'undefined') {
+    gtag('event', 'connection_status', {
+      'event_category': 'technical_data',
+      'status': 'online'
+    });
+  }
+});
+
+window.addEventListener('offline', function() {
+  if (typeof gtag !== 'undefined') {
+    gtag('event', 'connection_status', {
+      'event_category': 'technical_data',
+      'status': 'offline'
+    });
+  }
+});
+
+// Evento para capturar redimensionamento da janela
+window.addEventListener('resize', function() {
+  if (typeof gtag !== 'undefined') {
+    gtag('event', 'window_resize', {
+      'event_category': 'device_interaction',
+      'new_size': window.innerWidth + 'x' + window.innerHeight,
+      'window_width': window.innerWidth,
+      'window_height': window.innerHeight
+    });
+  }
 });
     </script>
 </body>
